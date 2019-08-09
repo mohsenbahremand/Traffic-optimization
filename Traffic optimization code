@@ -1,0 +1,51 @@
+#making qubo in the form of upper triangle
+qubo={}
+for a in range(1,3):
+    for b in range(1,4):
+        for c in range(1,3):
+            for d in range(1,4):
+                if c>a  or (c==a and b<d) or (a==c and b==d):
+                    qubo[('q%d%d'%(a,b),'q%d%d'%(c,d))]=0
+
+#entering the path of each car
+car11=[1,0,0,1,0,0,1,0,0,1,0,0]
+car12=[1,0,0,1,0,0,0,0,1,0,0,1]
+car13=[0,0,1,0,0,0,0,1,0,0,1,1]
+car21=[1,0,0,1,0,0,1,0,0,1,0,0]
+car22=[1,0,0,1,0,0,0,0,1,0,0,1]
+car23=[0,0,1,0,0,0,0,1,0,0,1,1]
+
+#penalty due to existance of two cars in the same section
+for s in range(12):
+    for car in range(1,3):
+        for route in range(1,4):
+            for car1 in range(1,3):
+                for route1 in range(1,4):
+                    if car1>car  or (car==car1 and route<route1):
+                        if eval('car%d%d'%(car,route))[s]==1 and eval('car%d%d'%(car1,route1))[s]==1:
+                            qubo[('q%d%d'%(car,route),'q%d%d'%(car1,route1))]=qubo[('q%d%d'%(car,route),'q%d%d'%(car1,route1))]+2
+                    if (car==car1 and route==route1):
+                        if eval('car%d%d'%(car,route))[s]==1:
+                            qubo[('q%d%d'%(car,route),'q%d%d'%(car,route))]=qubo[('q%d%d'%(car,route),'q%d%d'%(car,route))]+1
+                      
+
+#penalty due to existance of one car in two sections at the same time
+k=5 #Scaling Factor                            
+for item in qubo:
+    if (item[0][1]==item[1][1]) and (item[0][2]==item[1][2]):
+        qubo[item]=qubo[item]-(k)
+    elif item[0][1]==item[1][1]:
+        qubo[item]=qubo[item]+(2*k)
+
+#printing qubo coefficients
+for keys,values in qubo.items():
+    print(keys,':',values)
+
+
+#Quantum Solver
+from dwave.system.samplers import DWaveSampler
+from dwave.system.composites import EmbeddingComposite
+sampler = EmbeddingComposite(DWaveSampler())
+response = sampler.sample_qubo(qubo, num_reads=5000)
+for datum in response.data(['sample', 'energy', 'num_occurrences']):
+    print(datum.sample, "Energy: ", datum.energy, "Occurrences: ", datum.num_occurrences)
